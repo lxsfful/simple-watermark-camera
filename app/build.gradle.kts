@@ -71,16 +71,6 @@ android {
             java.srcDirs("src/test/kotlin")
         }
     }
-
-    testOptions {
-        unitTests.all {
-            it.workingDir = file(".")
-        }
-    }
-}
-
-tasks.withType<Test>().configureEach {
-    classpath += files("build/tmp/kotlin-classes/debugUnitTest")
 }
 
 dependencies {
