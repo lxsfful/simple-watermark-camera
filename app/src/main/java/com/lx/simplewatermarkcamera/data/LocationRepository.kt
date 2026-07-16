@@ -9,6 +9,7 @@ import android.location.LocationManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.lx.simplewatermarkcamera.domain.LocationSnapshot
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -41,13 +42,17 @@ class LocationRepository(private val context: Context) {
             if (hasCoarseLocationPermission() || hasFineLocationPermission()) add(LocationManager.NETWORK_PROVIDER)
         }.filter { provider -> runCatching { manager.isProviderEnabled(provider) }.getOrDefault(false) }
         for (provider in providers) {
-            val location = runCatching {
-                suspendCancellableCoroutine { continuation ->
+            val location: Location? = try {
+                suspendCancellableCoroutine<Location?> { continuation ->
                     manager.getCurrentLocation(provider, null, context.mainExecutor) { result ->
                         if (continuation.isActive) continuation.resume(result)
                     }
                 }
-            }.getOrNull()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                null
+            }
             if (location != null) return location
         }
         return null

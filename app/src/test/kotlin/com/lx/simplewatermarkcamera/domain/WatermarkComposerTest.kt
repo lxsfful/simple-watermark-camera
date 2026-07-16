@@ -83,4 +83,20 @@ class WatermarkComposerTest {
 
         assertEquals("2026-06-13 01:03:07", text)
     }
+
+    @Test
+    fun omitsCoordinatesWhenLocationMissing() {
+        val config = WatermarkConfig(title = "项目检查", showCoordinates = true, showTime = false)
+        val content = WatermarkComposer.compose(config, CaptureMetadata(capturedAt = Instant.now(), location = null))
+
+        assertFalse(content.lines.any { it.label == "坐标" })
+    }
+
+    @Test
+    fun fallsBackToDefaultTitleWhenBlank() {
+        val config = WatermarkConfig(title = "   ", showTime = false)
+        val content = WatermarkComposer.compose(config, CaptureMetadata(capturedAt = Instant.now()))
+
+        assertEquals(WatermarkConfig.Default.title, content.title)
+    }
 }

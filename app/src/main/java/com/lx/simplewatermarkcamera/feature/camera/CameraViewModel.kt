@@ -1,7 +1,6 @@
 package com.lx.simplewatermarkcamera.feature.camera
 
 import android.app.Application
-import android.content.Context
 import android.net.Uri
 import androidx.camera.core.ImageCapture
 import androidx.lifecycle.AndroidViewModel
@@ -45,7 +44,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     private val storageRepository = PhotoStorageRepository(application)
     private val locationRepository = LocationRepository(application)
     private val weatherRepository = WeatherRepository()
-    private val renderer = WatermarkRenderer(application)
+    private val renderer = WatermarkRenderer()
     private val mutable = MutableStateFlow(CameraUiState())
 
     val uiState: StateFlow<CameraUiState> = combine(
@@ -87,9 +86,9 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { settingsRepository.update(transform) }
     }
 
-    fun saveLogo(context: Context, uri: Uri) {
+    fun saveLogo(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = runOperation("Logo 保存失败") { LogoStore.copyToPrivateStorage(context, uri) }
+            val result = runOperation("Logo 保存失败") { LogoStore.copyToPrivateStorage(getApplication(), uri) }
             when (result) {
                 is OperationResult.Success ->
                     settingsRepository.update { it.copy(logoPath = result.value, showLogo = true) }
@@ -107,11 +106,10 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             val config = snapshot.config
             val heading = snapshot.latestHeading
             val now = Instant.now()
+            val inserted = mutableListOf<Uri>()
             val result = withContext(Dispatchers.IO) {
                 runOperation("照片处理失败") {
-                    val needsLocation = config.showAddress || config.showWeather ||
-                        config.showCoordinates || config.showAltitude
-                    val location = if (needsLocation) {
+                    val location = if (config.needsLocation) {
                         locationRepository.currentOrLastKnownLocation(resolveAddress = config.showAddress)
                     } else null
                     val weather = if (config.showWeather) weatherRepository.currentWeather(location) else null
@@ -127,12 +125,15 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                         fileName = PhotoFileNameGenerator.generate(now, "WM"),
                         subFolder = "Watermarked",
                     )
+                    inserted += watermarkedUri
                     val originalUri = if (config.saveOriginal) {
-                        storageRepository.saveJpeg(
+                        val original = storageRepository.saveJpeg(
                             bytes = source.readBytes(),
                             fileName = PhotoFileNameGenerator.generate(now, "ORIGINAL"),
                             subFolder = "Original",
                         )
+                        inserted += original
+                        original
                     } else null
                     source.delete()
                     SavedPhotoResult(watermarkedUri, originalUri)
@@ -151,6 +152,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 is OperationResult.Failure -> {
                     source.delete()
+                    inserted.forEach { storageRepository.delete(it) }
                     mutable.update { it.copy(isCapturing = false, status = result.message) }
                 }
             }

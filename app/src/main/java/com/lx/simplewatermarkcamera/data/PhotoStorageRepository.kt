@@ -48,4 +48,8 @@ class PhotoStorageRepository(private val context: Context) {
             throw error
         }
     }
+
+    fun delete(uri: Uri) {
+        context.contentResolver.delete(uri, null, null)
+    }
 }

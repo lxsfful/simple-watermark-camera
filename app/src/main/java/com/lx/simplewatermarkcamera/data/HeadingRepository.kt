@@ -6,6 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.lx.simplewatermarkcamera.domain.BearingFormatter
+import com.lx.simplewatermarkcamera.domain.HeadingAccuracy
 import com.lx.simplewatermarkcamera.domain.HeadingSnapshot
 import kotlin.math.roundToInt
 
@@ -17,6 +18,7 @@ class HeadingRepository(context: Context) : SensorEventListener {
     private val gravity = FloatArray(3)
     private val geomagnetic = FloatArray(3)
     private var callback: ((HeadingSnapshot) -> Unit)? = null
+    private var lastAccuracy: Int = SensorManager.SENSOR_STATUS_UNRELIABLE
 
     var latest: HeadingSnapshot? = null
         private set
@@ -54,7 +56,14 @@ class HeadingRepository(context: Context) : SensorEventListener {
         }
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        when (sensor?.type) {
+            Sensor.TYPE_ROTATION_VECTOR,
+            Sensor.TYPE_MAGNETIC_FIELD,
+            Sensor.TYPE_ACCELEROMETER,
+            -> lastAccuracy = accuracy
+        }
+    }
 
     private fun smooth(source: FloatArray, target: FloatArray) {
         source.take(3).forEachIndexed { index, value ->
@@ -74,8 +83,17 @@ class HeadingRepository(context: Context) : SensorEventListener {
         SensorManager.getOrientation(rotationMatrix, orientation)
         val azimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
         val formatted = BearingFormatter.format(azimuth)
-        val rounded = formatted.copy(azimuthDegrees = formatted.azimuthDegrees.roundToInt().toFloat())
+        val withAccuracy = formatted.copy(accuracy = mapAccuracy(lastAccuracy))
+        val rounded = withAccuracy.copy(azimuthDegrees = withAccuracy.azimuthDegrees.roundToInt().toFloat())
+        if (latest == rounded) return
         latest = rounded
         callback?.invoke(rounded)
+    }
+
+    private fun mapAccuracy(status: Int): HeadingAccuracy = when (status) {
+        SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> HeadingAccuracy.High
+        SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> HeadingAccuracy.Medium
+        SensorManager.SENSOR_STATUS_ACCURACY_LOW -> HeadingAccuracy.Low
+        else -> HeadingAccuracy.Unreliable
     }
 }

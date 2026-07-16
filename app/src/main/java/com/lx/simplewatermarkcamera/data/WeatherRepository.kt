@@ -11,11 +11,27 @@ import java.time.Instant
 import java.util.Locale
 import java.util.concurrent.CancellationException
 
-class WeatherRepository {
+class WeatherRepository(
+    private val fetcher: (suspend (LocationSnapshot) -> WeatherSnapshot?)? = null
+) {
+    @Volatile private var cache: CacheEntry? = null
+
     suspend fun currentWeather(location: LocationSnapshot?): WeatherSnapshot? = withContext(Dispatchers.IO) {
         if (location == null) return@withContext null
+        val coarseKey = coarseKeyOf(location)
+        val now = System.currentTimeMillis()
+        val cached = cache
+        if (cached != null && cached.coarseKey == coarseKey && cached.expiresAt > now) {
+            return@withContext cached.snapshot.copy(source = WeatherSource.Cache)
+        }
+        val fetched = (fetcher ?: ::fetchFromNetwork)(location) ?: return@withContext null
+        cache = CacheEntry(fetched, coarseKey, now + WEATHER_CACHE_TTL_MS)
+        fetched
+    }
+
+    private suspend fun fetchFromNetwork(location: LocationSnapshot): WeatherSnapshot? {
         var connection: HttpURLConnection? = null
-        try {
+        return try {
             val latitude = "%.3f".format(Locale.US, location.latitude)
             val longitude = "%.3f".format(Locale.US, location.longitude)
             val url = URL(
@@ -26,12 +42,12 @@ class WeatherRepository {
                     "&timezone=auto"
             )
             connection = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 1800
-                readTimeout = 1800
+                connectTimeout = WEATHER_CONNECT_TIMEOUT_MS
+                readTimeout = WEATHER_READ_TIMEOUT_MS
                 requestMethod = "GET"
-                instanceFollowRedirects = false
+                instanceFollowRedirects = true
             }
-            if (connection.responseCode !in 200..299) return@withContext null
+            if (connection.responseCode !in 200..299) return null
             connection.inputStream.bufferedReader().use { it.readText() }.let { body ->
                 val temperature = Regex("\\\"temperature_2m\\\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)").find(body)
                     ?.groupValues
@@ -56,6 +72,9 @@ class WeatherRepository {
         }
     }
 
+    private fun coarseKeyOf(location: LocationSnapshot): String =
+        "%.3f,%.3f".format(Locale.US, location.latitude, location.longitude)
+
     private fun weatherCodeText(code: Int?): String? = when (code) {
         0 -> "晴"
         1, 2 -> "少云"
@@ -67,5 +86,17 @@ class WeatherRepository {
         80, 81, 82 -> "阵雨"
         95, 96, 99 -> "雷暴"
         else -> code?.let { "天气码 $it" }
+    }
+
+    private data class CacheEntry(
+        val snapshot: WeatherSnapshot,
+        val coarseKey: String,
+        val expiresAt: Long,
+    )
+
+    companion object {
+        private const val WEATHER_CONNECT_TIMEOUT_MS = 15_000
+        private const val WEATHER_READ_TIMEOUT_MS = 15_000
+        private const val WEATHER_CACHE_TTL_MS = 10 * 60 * 1000L
     }
 }

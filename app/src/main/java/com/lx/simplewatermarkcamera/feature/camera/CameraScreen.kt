@@ -7,9 +7,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.view.CameraController
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,8 +22,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -35,8 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -47,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +61,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 import com.lx.simplewatermarkcamera.data.HeadingRepository
 import com.lx.simplewatermarkcamera.domain.HeadingSnapshot
 import com.lx.simplewatermarkcamera.domain.WatermarkConfig
@@ -65,7 +71,6 @@ import java.io.File
 @Composable
 fun CameraScreen(
     uiState: CameraUiState,
-    snackbarHostState: SnackbarHostState,
     onOpenSettings: () -> Unit,
     onCaptured: (File) -> Unit,
     onCreateTempFile: () -> File,
@@ -123,6 +128,8 @@ fun CameraScreen(
         if (!hasCameraPermission) requestCameraPermission.launch(Manifest.permission.CAMERA)
     }
 
+    var previewView by remember { mutableStateOf<PreviewView?>(null) }
+    var focusPoint by remember { mutableStateOf<Offset?>(null) }
     val cameraController = remember {
         LifecycleCameraController(context).apply {
             setEnabledUseCases(CameraController.IMAGE_CAPTURE)
@@ -132,23 +139,51 @@ fun CameraScreen(
     LaunchedEffect(uiState.flashMode) {
         cameraController.imageCaptureFlashMode = uiState.flashMode
     }
+    LaunchedEffect(focusPoint) {
+        if (focusPoint != null) {
+            delay(1_000)
+            focusPoint = null
+        }
+    }
     DisposableEffect(lifecycleOwner, hasCameraPermission, cameraController) {
         if (hasCameraPermission) cameraController.bindToLifecycle(lifecycleOwner)
         onDispose { cameraController.unbind() }
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+    Scaffold { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             if (hasCameraPermission) {
                 AndroidView(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(cameraController) {
+                            detectTapGestures { offset ->
+                                focusPoint = offset
+                                focusOnTap(previewView, cameraController, offset)
+                            }
+                        },
                     factory = { ctx ->
                         PreviewView(ctx).apply {
                             scaleType = PreviewView.ScaleType.FILL_CENTER
                             controller = cameraController
+                            previewView = this
                         }
                     },
                 )
+                focusPoint?.let { point ->
+                    Box(
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .offset(x = point.x.dp, y = point.y.dp)
+                            .size(72.dp),
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .border(2.dp, Color.White, CircleShape),
+                        )
+                    }
+                }
             } else {
                 CameraPermissionPrompt { requestCameraPermission.launch(Manifest.permission.CAMERA) }
             }
@@ -200,8 +235,7 @@ fun CameraScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                val needsLocation = uiState.config.showAddress || uiState.config.showWeather ||
-                    uiState.config.showCoordinates || uiState.config.showAltitude
+                val needsLocation = uiState.config.needsLocation
                 if (needsLocation && !hasLocationPermission) {
                     Button(onClick = {
                         requestLocationPermissions.launch(
@@ -295,6 +329,12 @@ private fun hasAnyLocationPermission(context: android.content.Context): Boolean 
         context, Manifest.permission.ACCESS_COARSE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
     return fine || coarse
+}
+
+private fun focusOnTap(previewView: PreviewView?, controller: LifecycleCameraController, offset: Offset) {
+    val view = previewView ?: return
+    val point = view.meteringPointFactory.createPoint(offset.x, offset.y) ?: return
+    controller.cameraControl?.startFocusAndMetering(FocusMeteringAction.Builder(point).build())
 }
 
 // CameraUiState 扩展：计算预览内容（避免在 UI 层直接依赖 domain 逻辑）

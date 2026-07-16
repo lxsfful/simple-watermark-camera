@@ -18,6 +18,9 @@ data class WatermarkConfig(
     companion object {
         val Default = WatermarkConfig()
     }
+
+    val needsLocation: Boolean
+        get() = showAddress || showWeather || showCoordinates || showAltitude
 }
 
 data class LocationSnapshot(

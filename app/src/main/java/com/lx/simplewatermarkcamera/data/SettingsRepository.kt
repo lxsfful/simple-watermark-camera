@@ -1,6 +1,8 @@
 package com.lx.simplewatermarkcamera.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -12,50 +14,41 @@ import kotlinx.coroutines.flow.map
 private val Context.settingsDataStore by preferencesDataStore(name = "watermark_settings")
 
 class SettingsRepository(private val context: Context) {
-    val configFlow: Flow<WatermarkConfig> = context.settingsDataStore.data.map { preferences ->
-        WatermarkConfig(
-            title = preferences[Keys.title] ?: WatermarkConfig.Default.title,
-            showLogo = preferences[Keys.showLogo] ?: WatermarkConfig.Default.showLogo,
-            showTime = preferences[Keys.showTime] ?: WatermarkConfig.Default.showTime,
-            showAddress = preferences[Keys.showAddress] ?: WatermarkConfig.Default.showAddress,
-            showWeather = preferences[Keys.showWeather] ?: WatermarkConfig.Default.showWeather,
-            showCoordinates = preferences[Keys.showCoordinates] ?: WatermarkConfig.Default.showCoordinates,
-            showAltitude = preferences[Keys.showAltitude] ?: WatermarkConfig.Default.showAltitude,
-            showHeading = preferences[Keys.showHeading] ?: WatermarkConfig.Default.showHeading,
-            saveOriginal = preferences[Keys.saveOriginal] ?: WatermarkConfig.Default.saveOriginal,
-            writeGpsExif = preferences[Keys.writeGpsExif] ?: WatermarkConfig.Default.writeGpsExif,
-            logoPath = preferences[Keys.logoPath],
-        )
-    }
+    val configFlow: Flow<WatermarkConfig> = context.settingsDataStore.data.map { it.toWatermarkConfig() }
 
     suspend fun update(transform: (WatermarkConfig) -> WatermarkConfig) {
         context.settingsDataStore.edit { preferences ->
-            val current = WatermarkConfig(
-                title = preferences[Keys.title] ?: WatermarkConfig.Default.title,
-                showLogo = preferences[Keys.showLogo] ?: WatermarkConfig.Default.showLogo,
-                showTime = preferences[Keys.showTime] ?: WatermarkConfig.Default.showTime,
-                showAddress = preferences[Keys.showAddress] ?: WatermarkConfig.Default.showAddress,
-                showWeather = preferences[Keys.showWeather] ?: WatermarkConfig.Default.showWeather,
-                showCoordinates = preferences[Keys.showCoordinates] ?: WatermarkConfig.Default.showCoordinates,
-                showAltitude = preferences[Keys.showAltitude] ?: WatermarkConfig.Default.showAltitude,
-                showHeading = preferences[Keys.showHeading] ?: WatermarkConfig.Default.showHeading,
-                saveOriginal = preferences[Keys.saveOriginal] ?: WatermarkConfig.Default.saveOriginal,
-                writeGpsExif = preferences[Keys.writeGpsExif] ?: WatermarkConfig.Default.writeGpsExif,
-                logoPath = preferences[Keys.logoPath],
-            )
-            val next = transform(current)
-            preferences[Keys.title] = next.title
-            preferences[Keys.showLogo] = next.showLogo
-            preferences[Keys.showTime] = next.showTime
-            preferences[Keys.showAddress] = next.showAddress
-            preferences[Keys.showWeather] = next.showWeather
-            preferences[Keys.showCoordinates] = next.showCoordinates
-            preferences[Keys.showAltitude] = next.showAltitude
-            preferences[Keys.showHeading] = next.showHeading
-            preferences[Keys.saveOriginal] = next.saveOriginal
-            preferences[Keys.writeGpsExif] = next.writeGpsExif
-            next.logoPath?.let { preferences[Keys.logoPath] = it } ?: preferences.remove(Keys.logoPath)
+            val next = transform(preferences.toWatermarkConfig())
+            next.writeInto(preferences)
         }
+    }
+
+    private fun Preferences.toWatermarkConfig(): WatermarkConfig = WatermarkConfig(
+        title = this[Keys.title] ?: WatermarkConfig.Default.title,
+        showLogo = this[Keys.showLogo] ?: WatermarkConfig.Default.showLogo,
+        showTime = this[Keys.showTime] ?: WatermarkConfig.Default.showTime,
+        showAddress = this[Keys.showAddress] ?: WatermarkConfig.Default.showAddress,
+        showWeather = this[Keys.showWeather] ?: WatermarkConfig.Default.showWeather,
+        showCoordinates = this[Keys.showCoordinates] ?: WatermarkConfig.Default.showCoordinates,
+        showAltitude = this[Keys.showAltitude] ?: WatermarkConfig.Default.showAltitude,
+        showHeading = this[Keys.showHeading] ?: WatermarkConfig.Default.showHeading,
+        saveOriginal = this[Keys.saveOriginal] ?: WatermarkConfig.Default.saveOriginal,
+        writeGpsExif = this[Keys.writeGpsExif] ?: WatermarkConfig.Default.writeGpsExif,
+        logoPath = this[Keys.logoPath],
+    )
+
+    private fun WatermarkConfig.writeInto(prefs: MutablePreferences) {
+        prefs[Keys.title] = title
+        prefs[Keys.showLogo] = showLogo
+        prefs[Keys.showTime] = showTime
+        prefs[Keys.showAddress] = showAddress
+        prefs[Keys.showWeather] = showWeather
+        prefs[Keys.showCoordinates] = showCoordinates
+        prefs[Keys.showAltitude] = showAltitude
+        prefs[Keys.showHeading] = showHeading
+        prefs[Keys.saveOriginal] = saveOriginal
+        prefs[Keys.writeGpsExif] = writeGpsExif
+        logoPath?.let { prefs[Keys.logoPath] = it } ?: prefs.remove(Keys.logoPath)
     }
 
     private object Keys {

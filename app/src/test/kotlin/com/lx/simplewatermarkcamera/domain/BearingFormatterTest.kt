@@ -21,4 +21,11 @@ class BearingFormatterTest {
     fun normalizesNegativeAngles() {
         assertEquals(315f, BearingFormatter.normalize(-45f), 0.001f)
     }
+
+    @Test
+    fun formatsDisplayString() {
+        assertEquals("北 0°", BearingFormatter.display(BearingFormatter.format(0f)))
+        assertEquals("东北 45°", BearingFormatter.display(BearingFormatter.format(45f)))
+        assertEquals("西 270°", BearingFormatter.display(BearingFormatter.format(270f)))
+    }
 }

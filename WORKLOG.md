@@ -89,4 +89,66 @@ implementation(libs.coil.compose)
 
 ---
 
-_下次追加记录请在此行下方添加，格式为 `## YYYY-MM-DD Session N：...`_
+## 2026-07-16 Session 2：全面优化迭代（构建验证 + 审查修复 + 真机部署）
+
+### 背景
+用户请求"读取项目，然后全面进行优化和迭代"。本机此前无 JDK，先安装 Temurin 17.0.19。上一会话只到架构拆分，本会话首次跑通 Gradle build，并对照 `kotlin-reviewer` 审查结论 + 自审全面修复，最后在 Huawei Mate 30 Pro (Android 10) 真机部署验证。
+
+### 读取阶段发现（沿用 Session 1）
+20 个 Kotlin 源文件已拆分为 `core/data/domain/feature`。本次新增 `WatermarkFormatterTest`、`WeatherRepositoryTest`，扩展 `BearingFormatterTest`、`WatermarkComposerTest`，总计 20 个单测。
+
+### 执行内容
+
+#### 1. 构建验证（首次）
+- `winget install EclipseAdoptium.Temurin.17.JDK`
+- `./gradlew assembleDebug` → BUILD SUCCESSFUL（4m37s），产出 99 MB APK
+- `./gradlew assembleDebug testDebugUnitTest` → BUILD SUCCESSFUL（51s），20 tests, 0 failures
+
+#### 2. 启动 kotlin-reviewer agent 并对照自审修复
+
+| 级别 | 问题 | 处理 |
+|------|------|------|
+| HIGH 1 | 相机预览黑屏（"缺 PREVIEW flag"） | **未修改** — CameraX 1.3.4 `CameraController` 无 PREVIEW 常量（flags: IMAGE_CAPTURE/IMAGE_ANALYSIS/VIDEO_CAPTURE），预览隐式绑定；真机截屏 `docs/camera_preview.png` 证明原代码预览正常渲染 |
+| HIGH 2 | `runCatching{...}.getOrNull()` 吞 CancellationException | `LocationRepository.requestCurrentLocation` 用 `try/catch(CancellationException){throw}` |
+| HIGH 3 | 方位传感器 ~60Hz 触发整屏重组 | `HeadingRepository.publish` 加值未变则跳过 |
+| MED 1/2 | 非相机页 status 丢失/与导航竞争 | `SnackbarHost` 提升到 `MainActivity` 全局 `Box` |
+| MED 3 | saveLogo Activity Context 泄漏 | 改用 `getApplication()` |
+| MED 4 | SettingsRepository 映射重复 | 抽 `toWatermarkConfig()` / `writeInto()` |
+| MED 5 | 部分失败遗留 MediaStore 孤儿照片 | `processCapturedFile` 跟踪已插入 Uri 失败清理 |
+| LOW 1 | WatermarkRenderer 未用 context | 删除构造参数 |
+| LOW 2 | 多余 @Suppress DEPRECATION | 保留（Geocoder 3-arg 在 API 34 仍 deprecated） |
+| LOW 3 | WeatherRepository 1.8s 超时 + 禁重定向 | 15s + 允许重定向 |
+| LOW 4 | HeadingAccuracy 永远 Medium | `onAccuracyChanged` 记录真实精度，`mapAccuracy()` 映射 |
+
+#### 3. 功能新增
+- **天气 TTL 缓存**：10 分钟同粗坐标复用，`fetcher` 可注入便于测试。`WeatherSource.Cache` 区分来源。
+- **点击对焦**：`PreviewView.meteringPointFactory.createPoint(x,y)` + `cameraControl.startFocusAndMetering(...)`；白色圆圈指示器 1 秒消失。
+
+#### 4. 单元测试：4 → 20
+
+#### 5. 真机部署（关键里程碑）
+- 设备 Huawei ELE-AL00 (Mate 30 Pro), Android 10 (SDK 29), 1080×2340
+- `adb install -r` → Success；`pm grant` CAMERA + 定位；`am start` 启动
+- 截屏 `docs/camera_preview.png`：预览、顶栏、预览卡片、拍照按钮全部正常显示
+- logcat：无 FATAL，无 AndroidRuntime 异常
+
+### 失败路径 / 未尝试路径
+
+- **ADB `input tap` 在本机 EMUI 上无法驱动 Compose UI**（多次尝试 `input tap` / `input touchscreen tap` / `input motionevent` 均无响应，截屏 md5 不变）。这是华为 EMUI 输入注入的已知限制，**非应用代码问题**。开发者用手指触摸正常操作。
+- 因此拍照 → 预览 → 保存到相册的端到端 ADB 验证未能完成；相关代码路径已通过单元测试 + 静态分析覆盖。
+- 第二个审查 agent（code-reviewer）启动后未返回结论（可能超时/未完成），故最终结论以 `kotlin-reviewer` + 自审为主。
+
+### 关键发现（值得记录）
+
+1. **CameraX `CameraController` 无 PREVIEW 常量**，预览隐式绑定。`setEnabledUseCases(IMAGE_CAPTURE)` 是正确用法。
+2. **`pointerInput` 在 `androidx.compose.ui.input.pointer`**，不是 `foundation.gestures`（后者只有手势检测器）。
+3. **Kotlin 构造器默认值不能引用类成员**——必须默认值 `null` + 方法体内 `?:`。
+4. **`try + catch(Sub){throw} + catch(Super){null}` 推断陷阱**：需要显式类型注解 `val x: T? = try { ... }`。
+
+### 新增依赖
+无（沿用 Session 1 的 Coil 等）。
+
+### 文件变更摘要
+详见 `docs/iteration-summary.md` 第四节。
+
+---

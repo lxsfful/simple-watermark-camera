@@ -1,6 +1,5 @@
 package com.lx.simplewatermarkcamera.data
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -18,7 +17,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import kotlin.math.roundToInt
 
-class WatermarkRenderer(private val context: Context) {
+class WatermarkRenderer {
     fun renderJpeg(source: File, config: WatermarkConfig, metadata: CaptureMetadata): ByteArray {
         val bitmap = decodeCorrectlyOriented(source)
         val mutable = bitmap.copy(Bitmap.Config.ARGB_8888, true)

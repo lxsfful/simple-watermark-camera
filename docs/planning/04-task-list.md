@@ -78,10 +78,38 @@
 - [x] 支持打开相册
 - [x] 临时修改标题后重新生成水印
 - [x] 设置页 2-3 个固定模板快速套用
-- [ ] 对焦/曝光基础体验（点击对焦）
+- [x] 对焦/曝光基础体验（点击对焦）— 2026-07-16 完成
 - [ ] 大图内存优化（已有 inSampleSize，持续观察）
 - [ ] 连续拍照压力测试（真机验证）
 - [ ] Release APK 打包
+
+## 2026-07-16 优化迭代补丁（Session 2）
+
+### 构建
+- [x] 首次 `./gradlew assembleDebug` 验证通过
+- [x] 单元测试 4 → 20 个，全部通过
+
+### Kotlin-reviewer 审查修复
+- [x] **H2** LocationRepository 不再吞 CancellationException
+- [x] **H3** HeadingRepository 方位值未变则跳过（去重），消除 ~60Hz 整屏重组
+- [ ] **H1** ~~相机预览黑屏（缺 PREVIEW flag）~~ — **审查误报**：CameraX 1.3.4 无 PREVIEW 常量，预览隐式绑定；真机验证原代码预览正常（`docs/camera_preview.png`）
+- [x] **M1/M2** SnackbarHost 提升到 app 级 MainActivity
+- [x] **M3** saveLogo 改用 application Context
+- [x] **M4** SettingsRepository 映射去重（toWatermarkConfig / writeInto）
+- [x] **M5** 部分失败清理已插入 MediaStore Uri（防孤儿照片）
+- [x] **L1** WatermarkRenderer 去无用 context 参数
+- [x] **L3** WeatherRepository 超时 1.8s→15s、允许重定向
+- [x] **L4** HeadingRepository 传递真实传感器精度
+
+### 新增
+- [x] 天气 TTL 缓存（10 分钟同粗坐标复用，可注入 fetcher 测试）
+- [x] 点击对焦 + 白色圆圈指示器
+- [x] `WatermarkConfig.needsLocation` DRY 提取
+- [x] 新增 `WatermarkFormatterTest`、`WeatherRepositoryTest`
+- [x] 真机部署验证（Huawei Mate 30 Pro, Android 10）
+
+### 跳过（保留）
+- [x] L2 保留 `@Suppress("DEPRECATION")`（Geocoder 3-arg 在 API 34 仍 deprecated）
 
 验收：拍照后可预览、分享、重拍；闪光灯可控；模板一键套用。
 

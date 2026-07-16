@@ -1,6 +1,5 @@
 package com.lx.simplewatermarkcamera.feature.settings
 
-import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -92,12 +91,12 @@ fun SettingsScreen(
     config: WatermarkConfig,
     onBack: () -> Unit,
     onUpdateConfig: ((WatermarkConfig) -> WatermarkConfig) -> Unit,
-    onLogoPicked: (Context, Uri) -> Unit,
+    onLogoPicked: (Uri) -> Unit,
 ) {
     val context = LocalContext.current
     var title by remember(config.title) { mutableStateOf(config.title) }
     val pickLogo = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        uri?.let { onLogoPicked(context, it) }
+        uri?.let { onLogoPicked(it) }
     }
 
     Scaffold(
