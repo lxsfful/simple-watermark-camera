@@ -282,25 +282,38 @@ fun CameraScreen(
 
 @Composable
 private fun WatermarkPreviewCard(content: WatermarkContent, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.72f)),
-        shape = RoundedCornerShape(18.dp),
-    ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Box(modifier = modifier.fillMaxWidth()) {
+        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (content.logoPath != null) {
                 Box(
                     Modifier
-                        .size(52.dp)
-                        .background(Color(0xFF26A269), RoundedCornerShape(12.dp)),
+                        .size(36.dp)
+                        .background(Color(0xFF26A269), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center,
                 ) { Text("LOGO", style = MaterialTheme.typography.labelSmall) }
-                Spacer(Modifier.size(12.dp))
+                Spacer(Modifier.size(8.dp))
             }
             Column {
-                Text(content.title, fontWeight = FontWeight.Bold, color = Color.White)
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFF7A36D6), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        content.title,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
                 content.lines.take(6).forEach { line ->
-                    Text(line.text, color = Color(0xFFEAF5EF), style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        line.text,
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
         }
@@ -343,14 +356,14 @@ val CameraUiState.previewContent: WatermarkContent
     get() = WatermarkContent(
         title = config.title.trim().ifEmpty { WatermarkConfig.Default.title },
         lines = buildList {
-            if (config.showTime) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("时间", "2024-01-01 12:00:00"))
-            if (config.showCoordinates) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("坐标", "拍照时自动写入"))
-            if (config.showAltitude) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("海拔", "拍照时自动写入"))
+            if (config.showTime) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("时间", "2024-01-01 12:00:00", icon = "🕒"))
+            if (config.showCoordinates) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("坐标", "拍照时自动写入", icon = "🌐"))
+            if (config.showAltitude) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("海拔", "拍照时自动写入", icon = "🏔️"))
             if (config.showHeading) latestHeading?.let {
-                add(com.lx.simplewatermarkcamera.domain.WatermarkLine("方位", "${it.cardinalDirection} ${it.azimuthDegrees.toInt()}°"))
+                add(com.lx.simplewatermarkcamera.domain.WatermarkLine("方位", "${it.cardinalDirection} ${it.azimuthDegrees.toInt()}°", icon = "🧭"))
             }
-            if (config.showWeather) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("天气", "拍照时获取"))
-            if (config.showAddress) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("地点", "拍照时获取"))
+            if (config.showWeather) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("天气", "拍照时获取", icon = "☀️"))
+            if (config.showAddress) add(com.lx.simplewatermarkcamera.domain.WatermarkLine("地点", "拍照时获取", icon = "📍"))
         },
         logoPath = if (config.showLogo) config.logoPath else null,
     )

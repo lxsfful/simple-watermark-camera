@@ -29,16 +29,26 @@ class WatermarkRenderer {
             hasLogo = content.logoPath != null,
         )
         val scale = bitmap.width / 1080f
-        val padding = (24f * scale).coerceAtLeast(18f)
-        val radius = (18f * scale).coerceAtLeast(12f)
-        val cardRect = RectF(card.left.toFloat(), card.top.toFloat(), card.right.toFloat(), card.bottom.toFloat())
-        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(185, 0, 0, 0) }
-        canvas.drawRoundRect(cardRect, radius, radius, bgPaint)
+        val padding = (12f * scale).coerceAtLeast(10f)
+
+        // 放弃整体半透明黑框，仅绘制标题彩色 Tag 标签背景
+        val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = (16f * scale).coerceAtLeast(12f)
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        }
+        val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = (13f * scale).coerceAtLeast(10f)
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            setShadowLayer(4f, 1.5f, 1.5f, Color.argb(220, 0, 0, 0))
+        }
 
         val logoBitmap = content.logoPath?.let { path -> decodeLogo(path) }
         val logoSize = if (logoBitmap != null) (card.height - padding * 2).roundToInt().coerceAtLeast(1) else 0
         val logoLeft = card.left + padding
         val textLeft = if (logoBitmap != null) logoLeft + logoSize + padding else card.left + padding
+
         logoBitmap?.let { logo ->
             val dest = Rect(
                 logoLeft.roundToInt(),
@@ -50,25 +60,31 @@ class WatermarkRenderer {
             logo.recycle()
         }
 
-        val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = (32f * scale).coerceAtLeast(26f)
-            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
-            setShadowLayer(3f, 1f, 1f, Color.BLACK)
-        }
-        val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.rgb(235, 245, 240)
-            textSize = (23f * scale).coerceAtLeast(19f)
-            setShadowLayer(2f, 1f, 1f, Color.BLACK)
-        }
         var y = card.top + padding - titlePaint.fontMetrics.ascent
         val maxTextWidth = (card.right - padding - textLeft).coerceAtLeast(1f)
-        canvas.drawText(ellipsize(content.title, titlePaint, maxTextWidth), textLeft, y, titlePaint)
-        y += titlePaint.fontSpacing * 0.98f
+        val titleText = content.title
+
+        // 绘制标题紫色 Tag
+        val titleWidth = titlePaint.measureText(titleText)
+        val tagPaddingX = 14f * scale
+        val tagPaddingY = 6f * scale
+        val tagRect = RectF(
+            textLeft - 4f,
+            card.top + padding - 2f,
+            textLeft + titleWidth + tagPaddingX,
+            card.top + padding + titlePaint.fontSpacing + tagPaddingY
+        )
+        val tagBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#7A36D6") // 马克相机经典紫色
+        }
+        canvas.drawRoundRect(tagRect, 8f * scale, 8f * scale, tagBgPaint)
+        canvas.drawText(titleText, textLeft + tagPaddingX / 3f, y + tagPaddingY / 2f, titlePaint)
+
+        y += titlePaint.fontSpacing * 1.45f
         content.lines.forEach { line ->
-            if (y < card.bottom - padding) {
+            if (y < card.bottom + padding) {
                 canvas.drawText(ellipsize(line.text, linePaint, maxTextWidth), textLeft, y, linePaint)
-                y += linePaint.fontSpacing * 0.98f
+                y += linePaint.fontSpacing * 1.15f
             }
         }
         return ByteArrayOutputStream().use { output ->

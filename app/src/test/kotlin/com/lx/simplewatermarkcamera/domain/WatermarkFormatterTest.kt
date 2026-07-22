@@ -9,10 +9,10 @@ import java.time.ZoneId
 class WatermarkFormatterTest {
     @Test
     fun formatsLatitudeAndLongitude() {
-        assertEquals("纬度 39.916527", WatermarkFormatter.formatLatitude(39.916527))
-        assertEquals("经度 116.397128", WatermarkFormatter.formatLongitude(116.397128))
+        assertEquals("39.916527°N", WatermarkFormatter.formatLatitude(39.916527))
+        assertEquals("116.397128°E", WatermarkFormatter.formatLongitude(116.397128))
         assertEquals(
-            "纬度 39.916527, 经度 116.397128",
+            "39.916527°N, 116.397128°E",
             WatermarkFormatter.formatCoordinates(LocationSnapshot(39.916527, 116.397128, capturedAt = Instant.now())),
         )
     }
@@ -22,6 +22,7 @@ class WatermarkFormatterTest {
         assertEquals("42.5 m", WatermarkFormatter.formatAltitude(42.5))
         assertEquals("±12m", WatermarkFormatter.formatAccuracy(12.4f))
         assertNull(WatermarkFormatter.formatAltitude(null))
+        assertNull(WatermarkFormatter.formatAltitude(0.0))
         assertNull(WatermarkFormatter.formatAccuracy(null))
     }
 

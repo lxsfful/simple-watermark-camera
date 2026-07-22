@@ -40,10 +40,10 @@ class WatermarkComposerTest {
         val content = WatermarkComposer.compose(config, metadata)
 
         assertEquals("项目检查", content.title)
-        assertTrue(content.lines.any { it.text == "地点：北京市朝阳区" })
-        assertTrue(content.lines.any { it.text.contains("坐标：纬度 39.916527, 经度 116.397128") })
-        assertTrue(content.lines.any { it.text == "海拔：42.5 m" })
-        assertTrue(content.lines.any { it.text == "方位：东北 45°" })
+        assertTrue(content.lines.any { it.text.contains("地点：北京市朝阳区") })
+        assertTrue(content.lines.any { it.text.contains("坐标：39.916527°N, 116.397128°E") })
+        assertTrue(content.lines.any { it.text.contains("海拔：42.5 m") })
+        assertTrue(content.lines.any { it.text.contains("方位：东北 45°") })
     }
 
     @Test

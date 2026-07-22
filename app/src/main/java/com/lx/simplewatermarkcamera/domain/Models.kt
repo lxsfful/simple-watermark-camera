@@ -59,8 +59,13 @@ data class CaptureMetadata(
 data class WatermarkLine(
     val label: String,
     val value: String,
+    val icon: String = "",
 ) {
-    val text: String = if (label.isBlank()) value else "$label：$value"
+    val text: String = buildString {
+        if (icon.isNotBlank()) append("$icon ")
+        if (label.isNotBlank()) append("$label：")
+        append(value)
+    }
 }
 
 data class WatermarkContent(

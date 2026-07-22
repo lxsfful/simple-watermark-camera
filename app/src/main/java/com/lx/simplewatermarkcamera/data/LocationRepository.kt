@@ -73,21 +73,30 @@ class LocationRepository(private val context: Context) {
     private fun resolveAddress(location: Location): String? = runCatching {
         if (!Geocoder.isPresent()) return@runCatching null
         @Suppress("DEPRECATION")
-        Geocoder(context, Locale.CHINA).getFromLocation(location.latitude, location.longitude, 1)
-            ?.firstOrNull()
-            ?.let { address ->
-                listOfNotNull(address.adminArea, address.locality, address.subLocality, address.thoroughfare)
-                    .distinct()
-                    .joinToString("")
-                    .ifBlank { null }
-            }
+        val addressObj = Geocoder(context, Locale.CHINA).getFromLocation(location.latitude, location.longitude, 1)
+            ?.firstOrNull() ?: return@runCatching null
+
+        val raw = addressObj.getAddressLine(0)?.trim()
+        val cleaned = if (!raw.isNullOrBlank()) {
+            raw.replace(Regex("^(中国|China)"), "").trim()
+        } else {
+            listOfNotNull(
+                addressObj.adminArea,
+                addressObj.locality,
+                addressObj.subLocality,
+                addressObj.thoroughfare,
+                addressObj.subThoroughfare,
+                addressObj.featureName
+            ).distinct().joinToString("")
+        }
+        cleaned.ifBlank { null }
     }.getOrNull()
 
     private fun Location.toSnapshot(address: String?): LocationSnapshot = LocationSnapshot(
         latitude = latitude,
         longitude = longitude,
         accuracyMeters = if (hasAccuracy()) accuracy else null,
-        altitudeMeters = if (hasAltitude()) altitude else null,
+        altitudeMeters = if (hasAltitude() && kotlin.math.abs(altitude) > 0.001) altitude else null,
         address = address,
         capturedAt = Instant.ofEpochMilli(time.takeIf { it > 0L } ?: System.currentTimeMillis()),
     )

@@ -4,26 +4,31 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 object WatermarkFormatter {
     private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
+    private val dateOfWeekFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd EEEE", Locale.CHINA)
 
     fun formatTime(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
         timeFormatter.format(instant.atZone(zoneId))
 
+    fun formatTimeWithDayOfWeek(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
+        dateOfWeekFormatter.format(instant.atZone(zoneId))
+
     fun formatCoordinates(location: LocationSnapshot): String =
         "${formatLatitude(location.latitude)}, ${formatLongitude(location.longitude)}"
 
-    fun formatLatitude(latitude: Double): String = "纬度 %.6f".format(Locale.US, latitude)
+    fun formatLatitude(latitude: Double): String = "%.6f°%s".format(Locale.US, abs(latitude), if (latitude >= 0) "N" else "S")
 
-    fun formatLongitude(longitude: Double): String = "经度 %.6f".format(Locale.US, longitude)
+    fun formatLongitude(longitude: Double): String = "%.6f°%s".format(Locale.US, abs(longitude), if (longitude >= 0) "E" else "W")
 
     fun formatAccuracy(accuracyMeters: Float?): String? = accuracyMeters?.let {
         "±${it.roundToInt()}m"
     }
 
-    fun formatAltitude(altitudeMeters: Double?): String? = altitudeMeters?.let {
+    fun formatAltitude(altitudeMeters: Double?): String? = altitudeMeters?.takeIf { abs(it) > 0.001 }?.let {
         "%.1f m".format(Locale.US, it)
     }
 
@@ -59,24 +64,24 @@ object WatermarkComposer {
         val location = metadata.location
         val lines = buildList {
             if (config.showTime) {
-                add(WatermarkLine("时间", WatermarkFormatter.formatTime(metadata.capturedAt)))
+                add(WatermarkLine("时间", WatermarkFormatter.formatTime(metadata.capturedAt), icon = "🕒"))
             }
             if (config.showAddress) {
-                WatermarkFormatter.formatAddress(location?.address)?.let { add(WatermarkLine("地点", it)) }
+                WatermarkFormatter.formatAddress(location?.address)?.let { add(WatermarkLine("地点", it, icon = "📍")) }
             }
             if (config.showWeather) {
-                WatermarkFormatter.formatWeather(metadata.weather)?.let { add(WatermarkLine("天气", it)) }
+                WatermarkFormatter.formatWeather(metadata.weather)?.let { add(WatermarkLine("天气", it, icon = "☀️")) }
             }
             if (config.showCoordinates && location != null) {
                 val accuracy = WatermarkFormatter.formatAccuracy(location.accuracyMeters)
                 val value = listOfNotNull(WatermarkFormatter.formatCoordinates(location), accuracy).joinToString(" ")
-                add(WatermarkLine("坐标", value))
+                add(WatermarkLine("坐标", value, icon = "🌐"))
             }
             if (config.showAltitude) {
-                WatermarkFormatter.formatAltitude(location?.altitudeMeters)?.let { add(WatermarkLine("海拔", it)) }
+                WatermarkFormatter.formatAltitude(location?.altitudeMeters)?.let { add(WatermarkLine("海拔", it, icon = "🏔️")) }
             }
             if (config.showHeading) {
-                metadata.heading?.let { add(WatermarkLine("方位", BearingFormatter.display(it))) }
+                metadata.heading?.let { add(WatermarkLine("方位", BearingFormatter.display(it), icon = "🧭")) }
             }
         }
         return WatermarkContent(
@@ -105,14 +110,14 @@ object WatermarkLayoutCalculator {
     fun bottomCard(imageWidth: Int, imageHeight: Int, lineCount: Int, hasLogo: Boolean): RectSpec {
         val safeWidth = imageWidth.coerceAtLeast(1)
         val safeHeight = imageHeight.coerceAtLeast(1)
-        val padding = (safeWidth * 0.035f).roundToInt().coerceAtLeast(18)
-        val titleHeight = (safeWidth * 0.045f).roundToInt().coerceAtLeast(32)
-        val lineHeight = (safeWidth * 0.031f).roundToInt().coerceAtLeast(24)
-        val logoExtra = if (hasLogo) (safeWidth * 0.01f).roundToInt() else 0
+        val padding = (safeWidth * 0.015f).roundToInt().coerceAtLeast(10)
+        val titleHeight = (safeWidth * 0.024f).roundToInt().coerceAtLeast(18)
+        val lineHeight = (safeWidth * 0.018f).roundToInt().coerceAtLeast(14)
+        val logoExtra = if (hasLogo) (safeWidth * 0.008f).roundToInt() else 0
         val desiredHeight = padding * 2 + titleHeight + lineHeight * lineCount.coerceAtLeast(1) + logoExtra
-        val maxHeight = (safeHeight * 0.42f).roundToInt().coerceAtLeast(1)
+        val maxHeight = (safeHeight * 0.28f).roundToInt().coerceAtLeast(1)
         val height = desiredHeight.coerceAtMost(maxHeight).coerceAtLeast(1)
-        val margin = (safeWidth * 0.025f).roundToInt().coerceAtLeast(12)
+        val margin = (safeWidth * 0.02f).roundToInt().coerceAtLeast(10)
         val width = (safeWidth - margin * 2).coerceAtLeast(1)
         val top = (safeHeight - height - margin).coerceAtLeast(0)
         return RectSpec(margin, top, width, height)
