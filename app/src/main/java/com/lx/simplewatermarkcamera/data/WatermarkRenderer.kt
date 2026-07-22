@@ -9,9 +9,9 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import androidx.exifinterface.media.ExifInterface
+import com.lx.simplewatermarkcamera.domain.CaptureMetadata
 import com.lx.simplewatermarkcamera.domain.WatermarkComposer
 import com.lx.simplewatermarkcamera.domain.WatermarkConfig
-import com.lx.simplewatermarkcamera.domain.CaptureMetadata
 import com.lx.simplewatermarkcamera.domain.WatermarkLayoutCalculator
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -19,18 +19,16 @@ import kotlin.math.roundToInt
 
 class WatermarkRenderer {
     fun renderJpeg(source: File, config: WatermarkConfig, metadata: CaptureMetadata): ByteArray {
-        val bitmap = decodeCorrectlyOriented(source)
-        val mutable = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-        if (mutable != bitmap) bitmap.recycle()
-        val canvas = Canvas(mutable)
+        val bitmap = decodeAndOrientMutable(source)
+        val canvas = Canvas(bitmap)
         val content = WatermarkComposer.compose(config, metadata)
         val card = WatermarkLayoutCalculator.bottomCard(
-            imageWidth = mutable.width,
-            imageHeight = mutable.height,
+            imageWidth = bitmap.width,
+            imageHeight = bitmap.height,
             lineCount = content.lines.size,
             hasLogo = content.logoPath != null,
         )
-        val scale = mutable.width / 1080f
+        val scale = bitmap.width / 1080f
         val padding = (24f * scale).coerceAtLeast(18f)
         val radius = (18f * scale).coerceAtLeast(12f)
         val cardRect = RectF(card.left.toFloat(), card.top.toFloat(), card.right.toFloat(), card.bottom.toFloat())
@@ -42,7 +40,12 @@ class WatermarkRenderer {
         val logoLeft = card.left + padding
         val textLeft = if (logoBitmap != null) logoLeft + logoSize + padding else card.left + padding
         logoBitmap?.let { logo ->
-            val dest = Rect(logoLeft.roundToInt(), (card.top + padding).roundToInt(), logoLeft.roundToInt() + logoSize, (card.top + padding).roundToInt() + logoSize)
+            val dest = Rect(
+                logoLeft.roundToInt(),
+                (card.top + padding).roundToInt(),
+                logoLeft.roundToInt() + logoSize,
+                (card.top + padding).roundToInt() + logoSize
+            )
             canvas.drawBitmap(logo, null, dest, Paint(Paint.ANTI_ALIAS_FLAG))
             logo.recycle()
         }
@@ -69,21 +72,22 @@ class WatermarkRenderer {
             }
         }
         return ByteArrayOutputStream().use { output ->
-            mutable.compress(Bitmap.CompressFormat.JPEG, 94, output)
-            mutable.recycle()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 94, output)
+            bitmap.recycle()
             output.toByteArray()
         }
     }
 
-    private fun decodeCorrectlyOriented(source: File): Bitmap {
+    private fun decodeAndOrientMutable(source: File): Bitmap {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
         BitmapFactory.decodeFile(source.absolutePath, options)
         val decodeOptions = BitmapFactory.Options().apply {
             inSampleSize = calculateSampleSize(options.outWidth, options.outHeight, maxLongEdge = 3000)
+            inMutable = true
         }
-        val bitmap = requireNotNull(BitmapFactory.decodeFile(source.absolutePath, decodeOptions)) {
+        val decoded = requireNotNull(BitmapFactory.decodeFile(source.absolutePath, decodeOptions)) {
             "无法解码照片"
         }
         val orientation = ExifInterface(source.absolutePath).getAttributeInt(
@@ -99,10 +103,12 @@ class WatermarkRenderer {
                 ExifInterface.ORIENTATION_FLIP_VERTICAL -> preScale(1f, -1f)
             }
         }
-        if (matrix.isIdentity) return bitmap
-        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-        bitmap.recycle()
-        return rotated
+        if (matrix.isIdentity) {
+            return if (decoded.isMutable) decoded else decoded.copy(Bitmap.Config.ARGB_8888, true).also { decoded.recycle() }
+        }
+        val rotated = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
+        decoded.recycle()
+        return if (rotated.isMutable) rotated else rotated.copy(Bitmap.Config.ARGB_8888, true).also { rotated.recycle() }
     }
 
     private fun decodeLogo(path: String): Bitmap? = runCatching {
@@ -126,12 +132,18 @@ class WatermarkRenderer {
         return sampleSize.coerceAtLeast(1)
     }
 
-    private fun ellipsize(text: String, paint: Paint, maxWidth: Float): String {
+    internal fun ellipsize(text: String, paint: Paint, maxWidth: Float): String {
+        if (maxWidth <= 0f) return ""
         if (paint.measureText(text) <= maxWidth) return text
-        var candidate = text
-        while (candidate.length > 1 && paint.measureText("$candidate…") > maxWidth) {
-            candidate = candidate.dropLast(1)
+        val ellipsis = "…"
+        val ellipsisWidth = paint.measureText(ellipsis)
+        val availableWidth = maxWidth - ellipsisWidth
+        if (availableWidth <= 0f) return ellipsis
+        val count = paint.breakText(text, true, availableWidth, null)
+        return if (count in 1..text.length) {
+            text.substring(0, count) + ellipsis
+        } else {
+            ellipsis
         }
-        return "$candidate…"
     }
 }

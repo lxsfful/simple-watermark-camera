@@ -1,6 +1,7 @@
 package com.lx.simplewatermarkcamera
 
 import android.os.Bundle
+import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -79,13 +80,17 @@ private fun WatermarkCameraApp(viewModel: CameraViewModel = viewModel()) {
                 onHeading = viewModel::updateHeading,
                 onCycleFlash = viewModel::cycleFlash,
             )
-            Screen.Settings -> SettingsScreen(
-                config = uiState.config,
-                onBack = { screen = Screen.Camera },
-                onUpdateConfig = viewModel::updateConfig,
-                onLogoPicked = { uri -> viewModel.saveLogo(uri) },
-            )
+            Screen.Settings -> {
+                BackHandler { screen = Screen.Camera }
+                SettingsScreen(
+                    config = uiState.config,
+                    onBack = { screen = Screen.Camera },
+                    onUpdateConfig = viewModel::updateConfig,
+                    onLogoPicked = { uri -> viewModel.saveLogo(uri) },
+                )
+            }
             Screen.Preview -> {
+                BackHandler { screen = Screen.Camera }
                 val result = uiState.lastResult
                 if (result != null) {
                     PhotoPreviewScreen(

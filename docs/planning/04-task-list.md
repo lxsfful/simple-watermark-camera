@@ -113,13 +113,25 @@
 
 验收：拍照后可预览、分享、重拍；闪光灯可控；模板一键套用。
 
-## 架构重构
+## 2026-07-22 内存渲染优化与 EXIF/导航增强迭代
 
-- [x] 将 MainActivity.kt（540 行单文件）按职责拆分：
-  - `feature/camera/` — CameraScreen、CameraViewModel
-  - `feature/settings/` — SettingsScreen
-  - `feature/preview/` — PhotoPreviewScreen、PhotoPreviewViewModel
-  - `MainActivity.kt` — 仅路由 + setContent
+### 内存与渲染性能
+- [x] **WatermarkRenderer 内存优化**：解码可写 Bitmap (`inMutable = true`)，减少原图复制；矩阵旋转后立即 recycle 中间 Bitmap。
+- [x] **Paint.breakText 文本截断**：取代逐字循环截断，性能提升至 O(1)。
+
+### 逻辑与功能补全
+- [x] **EXIF GPS 元数据写入**：使用 `ExifInterface` 实现标准 DMS 格式经纬度及海拔写入保存的 JPEG。
+- [x] **needsLocation 修复**：更新 `WatermarkConfig.needsLocation` 包含 `writeGpsExif`，确保纯 EXIF 写入模式下成功获取定位。
+- [x] **缓存文件回收**：`PhotoStorageRepository.cleanupOldTempFiles()` 在 ViewModel 初始化时自动清理超过 24 小时的临时缓存照片。
+
+### 交互与导航
+- [x] **BackHandler 接入**：`MainActivity` 设置页与预览页支持系统物理/手势返回键退回相机主页。
+- [x] **Compose 预览卡片防抖**：`remember(uiState.config, uiState.latestHeading)` 缓存 `previewContent` 降低高频重绘。
+
+### 测试与质量
+- [x] 增加 EXIF DMS 转换测试 `OptimizationAndExifTest`。
+- [x] 单元测试全套 21 项通过 (`./gradlew test`)。
+- [x] APK 构建通过 (`./gradlew assembleDebug`)。
 
 ## 测试任务
 

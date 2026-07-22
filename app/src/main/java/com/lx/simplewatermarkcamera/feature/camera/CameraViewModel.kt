@@ -47,6 +47,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     private val renderer = WatermarkRenderer()
     private val mutable = MutableStateFlow(CameraUiState())
 
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { storageRepository.cleanupOldTempFiles() }
+        }
+    }
+
     val uiState: StateFlow<CameraUiState> = combine(
         settingsRepository.configFlow,
         mutable,
@@ -120,10 +126,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                         heading = heading,
                     )
                     val watermarkedBytes = renderer.renderJpeg(source, config, metadata)
+                    val locationForExif = if (config.writeGpsExif) location else null
                     val watermarkedUri = storageRepository.saveJpeg(
                         bytes = watermarkedBytes,
                         fileName = PhotoFileNameGenerator.generate(now, "WM"),
                         subFolder = "Watermarked",
+                        locationForExif = locationForExif,
                     )
                     inserted += watermarkedUri
                     val originalUri = if (config.saveOriginal) {

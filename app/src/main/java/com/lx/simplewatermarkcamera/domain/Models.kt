@@ -20,7 +20,7 @@ data class WatermarkConfig(
     }
 
     val needsLocation: Boolean
-        get() = showAddress || showWeather || showCoordinates || showAltitude
+        get() = showAddress || showWeather || showCoordinates || showAltitude || writeGpsExif
 }
 
 data class LocationSnapshot(

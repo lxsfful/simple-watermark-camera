@@ -188,8 +188,9 @@ fun CameraScreen(
                 CameraPermissionPrompt { requestCameraPermission.launch(Manifest.permission.CAMERA) }
             }
 
+            val previewContent = remember(uiState.config, uiState.latestHeading) { uiState.previewContent }
             WatermarkPreviewCard(
-                content = uiState.previewContent,
+                content = previewContent,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(start = 16.dp, end = 16.dp, bottom = 144.dp),

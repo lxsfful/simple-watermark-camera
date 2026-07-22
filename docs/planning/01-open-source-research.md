@@ -1,10 +1,43 @@
 # 开源调研：Android 水印相机 / CameraX / 图片水印
 
-调研日期：2026-06-13
+调研日期：2026-06-13（初版） / 2026-07-16（用 GitHub Search API 复核）
 
 ## 调研说明
 
-原计划优先使用 `gh search repos` / `gh search code` 做 GitHub 代码搜索，但当前 GitHub CLI 未登录：`gh auth login` required。因此本次用 Web 搜索 + GitHub API/README 直连补充信息。后续如果需要更完整代码级调研，建议先在会话里执行 `! gh auth login` 登录后再跑 GitHub code search。
+- **2026-06-13 初版**：当时 `gh auth login` 未登录，用 Web 搜索 + README 直连。
+- **2026-07-16 复核**：用 `git credential fill` 取 `gho_` token 后，对 GitHub Search API 直查多组 query（watermark camera / camera watermark / 水印相机 / 近期活跃）。结论与初版一致，并补充了初版未覆盖的高星项目（初版漏掉 `natario1/CameraView` 5k★、`aserbao/AndroidCamera` 3k★ 等，因为当时没登录 GitHub API）。
+
+---
+
+## 2026-07-16 复核结论（重要，请先看）
+
+> **没有高星隐私优先 Android 水印相机；niche 真空；继续自研。**
+
+复核用 GitHub Search API（带 `gho_` token），多组 query + stars 排序：
+
+| ★ | 项目 | 类型 | 是否匹配本项目需求（隐私优先 / 本地 / Kotlin Compose） |
+|---:|---|---|---|
+| **5,127** | [natario1/CameraView](https://github.com/natario1/CameraView) | Java 通用相机**库** | ❌ 是 lib 不是 app；Java 不是 Compose；功能含滤镜/RAW/手势，水印只是其一；引入会拖进 80% 用不到的代码 |
+| **3,292** | [aserbao/AndroidCamera](https://github.com/aserbao/AndroidCamera) | Java 仿抖音 | ❌ 视频编辑/贴纸/美颜，与"本地无广告水印拍照"方向相反 |
+| 296 | copicseal/copicseal | Vue **桌面** EXIF 水印 | ❌ 不是 Android |
+| 166 | dearDreamWeb/camera-watermark | TypeScript 网页 | ❌ 不是 Android native |
+| 80 | Byclemon/watermark-camera | 微信小程序 | ❌ |
+| 14 | cgztzero/CameraxExtent | Kotlin+CameraX+水印库 | △ **技术栈最匹配**，但 14★ 体量小，2025-04 最后提交 |
+| 2 | bearnannan/Universal-Watermark | Kotlin, "AssistiveTouch / premium dark UI" | ❌ 听上去有付费/广告方向，与本项目无广告定位冲突 |
+| 0–1★ 一堆 | 个人 demo / 作业 | 多为 `license=?` 未声明 | ❌ |
+
+**为什么 fork 这些都不划算：**
+
+1. 高星项目（CameraView、AndroidCamera）都是通用相机，不是隐私优先水印 app。Fork 一个通用相机库去"裁剪"成水印 app，会继承大量不需要的代码（滤镜/RAW/人脸贴纸/美颜），后期维护负担反而更大。
+2. 技术栈匹配的小项目（cgztzero/CameraxExtent 14★）星少、单作者、未声明 license、质量未验证。Fork 低星未维护代码是经典反模式。
+3. 商业水印相机（Timestamp Camera、GPS Map Camera 等闭源）是主流，但都带广告/会员/上报；**开源侧"隐私优先本地水印相机"这个 niche 是空的**，正是本项目的差异化定位。
+4. 本项目现状（Kotlin+Compose+CameraX+DataStore，feature/domain/data/core 清晰分层，20 单测通过，真机验证，README "无广告/无后端/本地优先"）在这个空白 niche 里已经是有竞争力的存在。
+
+**建议**：继续自研；不要 fork。
+
+---
+
+## 2026-06-13 初版（保留作历史）
 
 ## 候选项目对比
 
