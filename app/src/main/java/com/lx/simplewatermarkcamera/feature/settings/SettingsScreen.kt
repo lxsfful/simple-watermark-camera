@@ -40,7 +40,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lx.simplewatermarkcamera.domain.FontSizeLevel
+import com.lx.simplewatermarkcamera.domain.LogoColorOption
+import com.lx.simplewatermarkcamera.domain.LogoPosition
 import com.lx.simplewatermarkcamera.domain.LogoSource
+import com.lx.simplewatermarkcamera.domain.OpacityLevel
 import com.lx.simplewatermarkcamera.domain.WatermarkConfig
 import androidx.compose.material3.RadioButton
 import androidx.compose.foundation.clickable
@@ -176,7 +179,7 @@ fun SettingsScreen(
             Text("Logo 选项", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             SettingSwitch("启用 Logo", config.showLogo) { v -> onUpdateConfig { it.copy(showLogo = v) } }
             if (config.showLogo) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -206,10 +209,69 @@ fun SettingsScreen(
                             onClick = {
                                 pickLogo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                             },
-                            modifier = Modifier.padding(start = 32.dp, top = 4.dp)
+                            modifier = Modifier.padding(start = 32.dp, top = 2.dp)
                         ) {
                             Icon(Icons.Default.Image, contentDescription = null)
                             Text("选择个人图片", modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+                    Text("Logo 位置", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LogoPosition.entries.forEach { pos ->
+                            val selected = config.logoPosition == pos
+                            if (selected) {
+                                Button(onClick = { onUpdateConfig { it.copy(logoPosition = pos) } }) {
+                                    Text(pos.label)
+                                }
+                            } else {
+                                OutlinedButton(onClick = { onUpdateConfig { it.copy(logoPosition = pos) } }) {
+                                    Text(pos.label)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+                    Text("Logo 颜色", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        LogoColorOption.entries.forEach { colorOpt ->
+                            val selected = config.logoColorOption == colorOpt
+                            if (selected) {
+                                Button(
+                                    onClick = { onUpdateConfig { it.copy(logoColorOption = colorOpt) } },
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Text(colorOpt.label, style = MaterialTheme.typography.bodySmall)
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = { onUpdateConfig { it.copy(logoColorOption = colorOpt) } },
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Text(colorOpt.label, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            // 水印透明度
+            Text("水印透明度", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OpacityLevel.entries.forEach { level ->
+                    val selected = config.opacityLevel == level
+                    if (selected) {
+                        Button(onClick = { onUpdateConfig { it.copy(opacityLevel = level) } }) {
+                            Text(level.label)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { onUpdateConfig { it.copy(opacityLevel = level) } }) {
+                            Text(level.label)
                         }
                     }
                 }

@@ -283,16 +283,10 @@ fun CameraScreen(
 @Composable
 private fun WatermarkPreviewCard(content: WatermarkContent, modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxWidth()) {
-        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (content.logoPath != null) {
-                Box(
-                    Modifier
-                        .size(36.dp)
-                        .background(Color(0xFF26A269), RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center,
-                ) { Text("LOGO", style = MaterialTheme.typography.labelSmall) }
-                Spacer(Modifier.size(8.dp))
-            }
+        Row(
+            Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column {
                 Box(
                     modifier = Modifier

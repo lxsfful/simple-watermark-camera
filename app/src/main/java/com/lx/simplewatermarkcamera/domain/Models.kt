@@ -4,6 +4,28 @@ import java.time.Instant
 
 enum class LogoSource { None, Company, Custom }
 
+enum class LogoPosition(val label: String) {
+    Above("文字上方"),
+    Left("文字左侧"),
+    Below("文字下方")
+}
+
+enum class LogoColorOption(val label: String, val hexColor: String?) {
+    Original("原色", null),
+    White("纯白", "#FFFFFF"),
+    Blue("京湖蓝", "#0072C6"),
+    Gold("亮金色", "#FFD700"),
+    Purple("品牌紫", "#7A36D6"),
+    Black("纯黑", "#000000")
+}
+
+enum class OpacityLevel(val alpha: Float, val label: String) {
+    Full(1.0f, "100% (不透明)"),
+    High(0.85f, "85%"),
+    Medium(0.70f, "70%"),
+    Low(0.50f, "50% (半透明)")
+}
+
 enum class FontSizeLevel(val scale: Float, val label: String) {
     Small(0.8f, "小"),
     Medium(1.0f, "标准"),
@@ -14,6 +36,9 @@ data class WatermarkConfig(
     val title: String = "项目检查",
     val showLogo: Boolean = true,
     val logoSource: LogoSource = LogoSource.Company,
+    val logoPosition: LogoPosition = LogoPosition.Above,
+    val logoColorOption: LogoColorOption = LogoColorOption.Original,
+    val opacityLevel: OpacityLevel = OpacityLevel.Full,
     val fontSizeLevel: FontSizeLevel = FontSizeLevel.Medium,
     val showTime: Boolean = true,
     val showAddress: Boolean = false,

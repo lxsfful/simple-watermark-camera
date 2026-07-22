@@ -7,11 +7,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Rect
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import androidx.exifinterface.media.ExifInterface
 import com.lx.simplewatermarkcamera.R
 import com.lx.simplewatermarkcamera.domain.CaptureMetadata
+import com.lx.simplewatermarkcamera.domain.LogoPosition
 import com.lx.simplewatermarkcamera.domain.LogoSource
 import com.lx.simplewatermarkcamera.domain.WatermarkComposer
 import com.lx.simplewatermarkcamera.domain.WatermarkConfig
@@ -26,6 +28,9 @@ class WatermarkRenderer(private val context: Context? = null) {
         val canvas = Canvas(bitmap)
         val content = WatermarkComposer.compose(config, metadata)
         val fontScale = config.fontSizeLevel.scale
+        val alphaFactor = config.opacityLevel.alpha
+        val alphaInt = (255 * alphaFactor).roundToInt().coerceIn(0, 255)
+
         val hasLogo = config.showLogo && config.logoSource != LogoSource.None
         val card = WatermarkLayoutCalculator.bottomCard(
             imageWidth = bitmap.width,
@@ -41,31 +46,63 @@ class WatermarkRenderer(private val context: Context? = null) {
             color = Color.WHITE
             textSize = (16f * scale).coerceAtLeast(12f)
             typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            alpha = alphaInt
         }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             textSize = (13f * scale).coerceAtLeast(10f)
             typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
-            setShadowLayer(4f, 1.5f, 1.5f, Color.argb(220, 0, 0, 0))
+            setShadowLayer(4f, 1.5f, 1.5f, Color.argb((220 * alphaFactor).roundToInt(), 0, 0, 0))
+            alpha = alphaInt
         }
 
         val logoBitmap = if (hasLogo) decodeLogo(config) else null
-        val logoSize = if (logoBitmap != null) (card.height - padding * 2).roundToInt().coerceAtLeast(1) else 0
-        val logoLeft = card.left.toFloat() + padding
-        val textLeft = if (logoBitmap != null) logoLeft + logoSize.toFloat() + padding else card.left.toFloat() + padding
-
-        logoBitmap?.let { logo ->
-            val dest = Rect(
-                logoLeft.roundToInt(),
-                (card.top.toFloat() + padding).roundToInt(),
-                logoLeft.roundToInt() + logoSize,
-                (card.top.toFloat() + padding).roundToInt() + logoSize
-            )
-            canvas.drawBitmap(logo, null, dest, Paint(Paint.ANTI_ALIAS_FLAG))
-            logo.recycle()
+        val logoPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            alpha = alphaInt
+            config.logoColorOption.hexColor?.let { hex ->
+                colorFilter = PorterDuffColorFilter(Color.parseColor(hex), PorterDuff.Mode.SRC_IN)
+            }
         }
 
-        var y = card.top.toFloat() + padding - titlePaint.fontMetrics.ascent
+        val logoPosition = config.logoPosition
+        var startY = card.top.toFloat() + padding
+
+        // 绘制 Logo：文字上方 (Above)
+        if (logoBitmap != null && logoPosition == LogoPosition.Above) {
+            val maxLogoHeight = 48f * scale
+            val aspect = logoBitmap.width.toFloat() / logoBitmap.height.toFloat()
+            val drawHeight = maxLogoHeight
+            val drawWidth = drawHeight * aspect
+            val logoRect = RectF(
+                card.left.toFloat() + padding,
+                startY,
+                card.left.toFloat() + padding + drawWidth,
+                startY + drawHeight
+            )
+            canvas.drawBitmap(logoBitmap, null, logoRect, logoPaint)
+            startY += drawHeight + (8f * scale)
+        }
+
+        val logoLeft = card.left.toFloat() + padding
+        var textLeft = card.left.toFloat() + padding
+
+        // 绘制 Logo：文字左侧 (Left)
+        if (logoBitmap != null && logoPosition == LogoPosition.Left) {
+            val maxLogoHeight = 54f * scale
+            val aspect = logoBitmap.width.toFloat() / logoBitmap.height.toFloat()
+            val drawHeight = maxLogoHeight
+            val drawWidth = drawHeight * aspect
+            val logoRect = RectF(
+                logoLeft,
+                startY,
+                logoLeft + drawWidth,
+                startY + drawHeight
+            )
+            canvas.drawBitmap(logoBitmap, null, logoRect, logoPaint)
+            textLeft = logoLeft + drawWidth + (12f * scale)
+        }
+
+        var y = startY - titlePaint.fontMetrics.ascent
         val maxTextWidth = (card.right.toFloat() - padding - textLeft).coerceAtLeast(1f)
         val titleText = content.title
 
@@ -75,23 +112,42 @@ class WatermarkRenderer(private val context: Context? = null) {
         val tagPaddingY = 6f * scale
         val tagRect = RectF(
             textLeft - 4f,
-            card.top.toFloat() + padding - 2f,
+            startY - 2f,
             textLeft + titleWidth + tagPaddingX,
-            card.top.toFloat() + padding + titlePaint.fontSpacing + tagPaddingY
+            startY + titlePaint.fontSpacing + tagPaddingY
         )
         val tagBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#7A36D6")
+            alpha = alphaInt
         }
         canvas.drawRoundRect(tagRect, 8f * scale, 8f * scale, tagBgPaint)
         canvas.drawText(titleText, textLeft + tagPaddingX / 3f, y + tagPaddingY / 2f, titlePaint)
 
         y += titlePaint.fontSpacing * 1.45f
         content.lines.forEach { line ->
-            if (y < card.bottom.toFloat() + padding) {
+            if (y < card.bottom.toFloat() + padding + (60f * scale)) {
                 canvas.drawText(ellipsize(line.text, linePaint, maxTextWidth), textLeft, y, linePaint)
                 y += linePaint.fontSpacing * 1.15f
             }
         }
+
+        // 绘制 Logo：文字下方 (Below)
+        if (logoBitmap != null && logoPosition == LogoPosition.Below) {
+            val maxLogoHeight = 44f * scale
+            val aspect = logoBitmap.width.toFloat() / logoBitmap.height.toFloat()
+            val drawHeight = maxLogoHeight
+            val drawWidth = drawHeight * aspect
+            val logoRect = RectF(
+                textLeft,
+                y + (6f * scale),
+                textLeft + drawWidth,
+                y + (6f * scale) + drawHeight
+            )
+            canvas.drawBitmap(logoBitmap, null, logoRect, logoPaint)
+        }
+
+        logoBitmap?.recycle()
+
         return ByteArrayOutputStream().use { output ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, 94, output)
             bitmap.recycle()
