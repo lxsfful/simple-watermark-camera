@@ -40,9 +40,11 @@ class WatermarkRenderer(private val context: Context? = null) {
             fontScale = fontScale,
             logoPosition = config.logoPosition,
         )
-        val scale = (bitmap.width / 1080f) * fontScale
+        // 使用短边计算 scale 比例，保证横屏 (4000x3000) 和竖屏 (3000x4000) 下字号与相对画面比例完全一致，消除横屏文字截断
+        val shortEdge = kotlin.math.min(bitmap.width, bitmap.height)
+        val scale = (shortEdge / 1080f) * fontScale
         val padding = (18f * scale).coerceAtLeast(12f)
-        val margin = (bitmap.width * 0.03f).coerceAtLeast(12f)
+        val margin = (shortEdge * 0.03f).coerceAtLeast(12f)
         val maxAllowedBottom = bitmap.height.toFloat() - margin
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -214,7 +216,7 @@ class WatermarkRenderer(private val context: Context? = null) {
         }
         BitmapFactory.decodeFile(source.absolutePath, options)
         val decodeOptions = BitmapFactory.Options().apply {
-            inSampleSize = calculateSampleSize(options.outWidth, options.outHeight, maxLongEdge = 3000)
+            inSampleSize = calculateSampleSize(options.outWidth, options.outHeight, maxLongEdge = 4096)
             inMutable = true
         }
         val decoded = requireNotNull(BitmapFactory.decodeFile(source.absolutePath, decodeOptions)) {

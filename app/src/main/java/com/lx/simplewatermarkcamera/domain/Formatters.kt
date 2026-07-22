@@ -129,7 +129,9 @@ object WatermarkLayoutCalculator {
     ): RectSpec {
         val safeWidth = imageWidth.coerceAtLeast(1)
         val safeHeight = imageHeight.coerceAtLeast(1)
-        val baseScale = (safeWidth / 1080f) * fontScale
+        // 使用短边计算 scale，保证横屏与竖屏下字号与比例完全一致
+        val shortEdge = kotlin.math.min(safeWidth, safeHeight)
+        val baseScale = (shortEdge / 1080f) * fontScale
 
         val padding = (18f * baseScale).roundToInt().coerceAtLeast(10)
         val titleHeight = (40f * baseScale).roundToInt().coerceAtLeast(20)
@@ -144,9 +146,9 @@ object WatermarkLayoutCalculator {
         } else 0
 
         val desiredHeight = padding * 2 + titleHeight + bigTimeHeight + lineHeight * lineCount.coerceAtLeast(1) + logoExtra
-        val maxHeight = (safeHeight * 0.55f).roundToInt().coerceAtLeast(1)
+        val maxHeight = (safeHeight * 0.70f).roundToInt().coerceAtLeast(1)
         val height = desiredHeight.coerceAtMost(maxHeight).coerceAtLeast(1)
-        val margin = (safeWidth * 0.03f).roundToInt().coerceAtLeast(12)
+        val margin = (shortEdge * 0.03f).roundToInt().coerceAtLeast(12)
         val width = (safeWidth - margin * 2).coerceAtLeast(1)
         val top = (safeHeight - height - margin).coerceAtLeast(0)
         return RectSpec(margin, top, width, height)
