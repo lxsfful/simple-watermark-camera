@@ -44,7 +44,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     private val storageRepository = PhotoStorageRepository(application)
     private val locationRepository = LocationRepository(application)
     private val weatherRepository = WeatherRepository()
-    private val renderer = WatermarkRenderer()
+    private val renderer = WatermarkRenderer(application)
     private val mutable = MutableStateFlow(CameraUiState())
 
     init {

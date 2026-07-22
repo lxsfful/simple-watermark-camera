@@ -39,7 +39,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lx.simplewatermarkcamera.domain.FontSizeLevel
+import com.lx.simplewatermarkcamera.domain.LogoSource
 import com.lx.simplewatermarkcamera.domain.WatermarkConfig
+import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.clickable
 
 private data class WatermarkTemplate(val name: String, val config: WatermarkConfig)
 
@@ -149,18 +153,67 @@ fun SettingsScreen(
                 singleLine = true,
             )
 
-            // Logo
-            Button(onClick = {
-                pickLogo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            }) {
-                Icon(Icons.Default.Image, contentDescription = null)
-                Text("选择 Logo", modifier = Modifier.padding(start = 8.dp))
+            // 字体大小
+            Text("字体大小", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FontSizeLevel.entries.forEach { level ->
+                    val selected = config.fontSizeLevel == level
+                    if (selected) {
+                        Button(onClick = { onUpdateConfig { it.copy(fontSizeLevel = level) } }) {
+                            Text(level.label)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { onUpdateConfig { it.copy(fontSizeLevel = level) } }) {
+                            Text(level.label)
+                        }
+                    }
+                }
             }
 
             HorizontalDivider()
 
-            Text("水印字段", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            SettingSwitch("显示 Logo", config.showLogo) { v -> onUpdateConfig { it.copy(showLogo = v) } }
+            // Logo 设置
+            Text("Logo 选项", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            SettingSwitch("启用 Logo", config.showLogo) { v -> onUpdateConfig { it.copy(showLogo = v) } }
+            if (config.showLogo) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onUpdateConfig { it.copy(logoSource = LogoSource.Company) } }
+                    ) {
+                        RadioButton(
+                            selected = config.logoSource == LogoSource.Company,
+                            onClick = { onUpdateConfig { it.copy(logoSource = LogoSource.Company) } }
+                        )
+                        Text("京湖集团 Logo (内置)")
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onUpdateConfig { it.copy(logoSource = LogoSource.Custom) } }
+                    ) {
+                        RadioButton(
+                            selected = config.logoSource == LogoSource.Custom,
+                            onClick = { onUpdateConfig { it.copy(logoSource = LogoSource.Custom) } }
+                        )
+                        Text("自定义个人 Logo")
+                    }
+                    if (config.logoSource == LogoSource.Custom) {
+                        Button(
+                            onClick = {
+                                pickLogo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
+                            modifier = Modifier.padding(start = 32.dp, top = 4.dp)
+                        ) {
+                            Icon(Icons.Default.Image, contentDescription = null)
+                            Text("选择个人图片", modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                }
+            }
             SettingSwitch("显示时间", config.showTime) { v -> onUpdateConfig { it.copy(showTime = v) } }
             SettingSwitch("显示方位", config.showHeading) { v -> onUpdateConfig { it.copy(showHeading = v) } }
             SettingSwitch("显示经纬度", config.showCoordinates) { v -> onUpdateConfig { it.copy(showCoordinates = v) } }

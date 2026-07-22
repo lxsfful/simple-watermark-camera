@@ -2,9 +2,19 @@ package com.lx.simplewatermarkcamera.domain
 
 import java.time.Instant
 
+enum class LogoSource { None, Company, Custom }
+
+enum class FontSizeLevel(val scale: Float, val label: String) {
+    Small(0.8f, "小"),
+    Medium(1.0f, "标准"),
+    Large(1.25f, "大")
+}
+
 data class WatermarkConfig(
     val title: String = "项目检查",
     val showLogo: Boolean = true,
+    val logoSource: LogoSource = LogoSource.Company,
+    val fontSizeLevel: FontSizeLevel = FontSizeLevel.Medium,
     val showTime: Boolean = true,
     val showAddress: Boolean = false,
     val showWeather: Boolean = false,

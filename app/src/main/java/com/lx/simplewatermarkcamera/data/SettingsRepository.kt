@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.lx.simplewatermarkcamera.domain.FontSizeLevel
+import com.lx.simplewatermarkcamera.domain.LogoSource
 import com.lx.simplewatermarkcamera.domain.WatermarkConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -26,6 +28,8 @@ class SettingsRepository(private val context: Context) {
     private fun Preferences.toWatermarkConfig(): WatermarkConfig = WatermarkConfig(
         title = this[Keys.title] ?: WatermarkConfig.Default.title,
         showLogo = this[Keys.showLogo] ?: WatermarkConfig.Default.showLogo,
+        logoSource = runCatching { LogoSource.valueOf(this[Keys.logoSource] ?: "") }.getOrDefault(WatermarkConfig.Default.logoSource),
+        fontSizeLevel = runCatching { FontSizeLevel.valueOf(this[Keys.fontSizeLevel] ?: "") }.getOrDefault(WatermarkConfig.Default.fontSizeLevel),
         showTime = this[Keys.showTime] ?: WatermarkConfig.Default.showTime,
         showAddress = this[Keys.showAddress] ?: WatermarkConfig.Default.showAddress,
         showWeather = this[Keys.showWeather] ?: WatermarkConfig.Default.showWeather,
@@ -40,6 +44,8 @@ class SettingsRepository(private val context: Context) {
     private fun WatermarkConfig.writeInto(prefs: MutablePreferences) {
         prefs[Keys.title] = title
         prefs[Keys.showLogo] = showLogo
+        prefs[Keys.logoSource] = logoSource.name
+        prefs[Keys.fontSizeLevel] = fontSizeLevel.name
         prefs[Keys.showTime] = showTime
         prefs[Keys.showAddress] = showAddress
         prefs[Keys.showWeather] = showWeather
@@ -54,6 +60,8 @@ class SettingsRepository(private val context: Context) {
     private object Keys {
         val title = stringPreferencesKey("title")
         val showLogo = booleanPreferencesKey("show_logo")
+        val logoSource = stringPreferencesKey("logo_source")
+        val fontSizeLevel = stringPreferencesKey("font_size_level")
         val showTime = booleanPreferencesKey("show_time")
         val showAddress = booleanPreferencesKey("show_address")
         val showWeather = booleanPreferencesKey("show_weather")
