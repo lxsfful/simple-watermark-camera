@@ -41,21 +41,35 @@ class WatermarkRenderer(private val context: Context? = null) {
             logoPosition = config.logoPosition,
         )
         val scale = (bitmap.width / 1080f) * fontScale
-        val padding = (12f * scale).coerceAtLeast(10f)
-        val margin = (bitmap.width * 0.025f).coerceAtLeast(12f)
+        val padding = (18f * scale).coerceAtLeast(12f)
+        val margin = (bitmap.width * 0.03f).coerceAtLeast(12f)
         val maxAllowedBottom = bitmap.height.toFloat() - margin
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
-            textSize = (16f * scale).coerceAtLeast(12f)
+            textSize = (36f * scale).coerceAtLeast(16f)
             typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            alpha = alphaInt
+        }
+        val bigTimePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = (72f * scale).coerceAtLeast(32f)
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            setShadowLayer(5f, 2f, 2f, Color.argb((220 * alphaFactor).roundToInt(), 0, 0, 0))
+            alpha = alphaInt
+        }
+        val dateSubPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = (24f * scale).coerceAtLeast(12f)
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            setShadowLayer(4f, 1.5f, 1.5f, Color.argb((220 * alphaFactor).roundToInt(), 0, 0, 0))
             alpha = alphaInt
         }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
-            textSize = (13f * scale).coerceAtLeast(10f)
+            textSize = (28f * scale).coerceAtLeast(14f)
             typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
-            setShadowLayer(4f, 1.5f, 1.5f, Color.argb((220 * alphaFactor).roundToInt(), 0, 0, 0))
+            setShadowLayer(4.5f, 1.5f, 1.5f, Color.argb((220 * alphaFactor).roundToInt(), 0, 0, 0))
             alpha = alphaInt
         }
 
@@ -70,9 +84,9 @@ class WatermarkRenderer(private val context: Context? = null) {
         val logoPosition = config.logoPosition
         var startY = card.top.toFloat() + padding
 
-        // 绘制 Logo：文字上方 (Above)
+        // 1. 绘制 Logo：文字上方 (Above)
         if (logoBitmap != null && logoPosition == LogoPosition.Above) {
-            val maxLogoHeight = 44f * scale
+            val maxLogoHeight = 110f * scale
             val aspect = logoBitmap.width.toFloat() / logoBitmap.height.toFloat()
             val drawHeight = maxLogoHeight
             val drawWidth = drawHeight * aspect
@@ -83,15 +97,15 @@ class WatermarkRenderer(private val context: Context? = null) {
                 (startY + drawHeight).coerceAtMost(maxAllowedBottom)
             )
             canvas.drawBitmap(logoBitmap, null, logoRect, logoPaint)
-            startY += drawHeight + (6f * scale)
+            startY += drawHeight + (12f * scale)
         }
 
         val logoLeft = card.left.toFloat() + padding
         var textLeft = card.left.toFloat() + padding
 
-        // 绘制 Logo：文字左侧 (Left)
+        // 2. 绘制 Logo：文字左侧 (Left)
         if (logoBitmap != null && logoPosition == LogoPosition.Left) {
-            val maxLogoHeight = 48f * scale
+            val maxLogoHeight = 130f * scale
             val aspect = logoBitmap.width.toFloat() / logoBitmap.height.toFloat()
             val drawHeight = maxLogoHeight
             val drawWidth = drawHeight * aspect
@@ -102,17 +116,17 @@ class WatermarkRenderer(private val context: Context? = null) {
                 (startY + drawHeight).coerceAtMost(maxAllowedBottom)
             )
             canvas.drawBitmap(logoBitmap, null, logoRect, logoPaint)
-            textLeft = logoLeft + drawWidth + (10f * scale)
+            textLeft = logoLeft + drawWidth + (18f * scale)
         }
 
         var y = startY - titlePaint.fontMetrics.ascent
         val maxTextWidth = (card.right.toFloat() - padding - textLeft).coerceAtLeast(1f)
         val titleText = content.title
 
-        // 绘制标题紫色 Tag
+        // 3. 绘制标题紫色 Tag (现场实拍)
         val titleWidth = titlePaint.measureText(titleText)
-        val tagPaddingX = 14f * scale
-        val tagPaddingY = 6f * scale
+        val tagPaddingX = 22f * scale
+        val tagPaddingY = 10f * scale
         val tagRect = RectF(
             textLeft - 4f,
             startY - 2f,
@@ -123,24 +137,59 @@ class WatermarkRenderer(private val context: Context? = null) {
             color = Color.parseColor("#7A36D6")
             alpha = alphaInt
         }
-        canvas.drawRoundRect(tagRect, 8f * scale, 8f * scale, tagBgPaint)
+        canvas.drawRoundRect(tagRect, 10f * scale, 10f * scale, tagBgPaint)
         canvas.drawText(titleText, textLeft + tagPaddingX / 3f, (y + tagPaddingY / 2f).coerceAtMost(maxAllowedBottom), titlePaint)
 
-        y += titlePaint.fontSpacing * 1.45f
-        content.lines.forEach { line ->
+        y += titlePaint.fontSpacing * 1.6f
+
+        // 4. 绘制大字时间块 17:22 | 星期二 \n 2026-07-14
+        if (config.showTime) {
+            val bigTimeStr = com.lx.simplewatermarkcamera.domain.WatermarkFormatter.formatBigTime(metadata.capturedAt)
+            val dayOfWeekStr = com.lx.simplewatermarkcamera.domain.WatermarkFormatter.formatDayOfWeek(metadata.capturedAt)
+            val dateStr = com.lx.simplewatermarkcamera.domain.WatermarkFormatter.formatDate(metadata.capturedAt)
+
+            val bigTimeY = y - bigTimePaint.fontMetrics.ascent
+            canvas.drawText(bigTimeStr, textLeft, (bigTimeY).coerceAtMost(maxAllowedBottom), bigTimePaint)
+
+            val bigTimeWidth = bigTimePaint.measureText(bigTimeStr)
+            val dividerX = textLeft + bigTimeWidth + (14f * scale)
+
+            // 绘制竖线 |
+            val dividerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                strokeWidth = 3.5f * scale
+                alpha = (alphaInt * 0.7f).roundToInt()
+            }
+            val dividerTop = bigTimeY + bigTimePaint.fontMetrics.ascent + (8f * scale)
+            val dividerBottom = bigTimeY + (4f * scale)
+            canvas.drawLine(dividerX, dividerTop, dividerX, dividerBottom.coerceAtMost(maxAllowedBottom), dividerPaint)
+
+            val dateX = dividerX + (16f * scale)
+            val dateY1 = dividerTop - dateSubPaint.fontMetrics.ascent
+            val dateY2 = dateY1 + dateSubPaint.fontSpacing * 1.05f
+
+            canvas.drawText(dayOfWeekStr, dateX, dateY1.coerceAtMost(maxAllowedBottom), dateSubPaint)
+            canvas.drawText(dateStr, dateX, dateY2.coerceAtMost(maxAllowedBottom), dateSubPaint)
+
+            y += bigTimePaint.fontSpacing * 1.15f
+        }
+
+        // 5. 绘制其它正文行 (地点、天气、坐标、海拔、方位)
+        val filteredLines = content.lines.filter { !it.text.startsWith("🕒") && !it.label.contains("时间") }
+        filteredLines.forEach { line ->
             if (y <= maxAllowedBottom) {
                 canvas.drawText(ellipsize(line.text, linePaint, maxTextWidth), textLeft, y, linePaint)
-                y += linePaint.fontSpacing * 1.15f
+                y += linePaint.fontSpacing * 1.25f
             }
         }
 
-        // 绘制 Logo：文字下方 (Below)
+        // 6. 绘制 Logo：文字下方 (Below)
         if (logoBitmap != null && logoPosition == LogoPosition.Below) {
-            val maxLogoHeight = 40f * scale
+            val maxLogoHeight = 100f * scale
             val aspect = logoBitmap.width.toFloat() / logoBitmap.height.toFloat()
             val drawHeight = maxLogoHeight
             val drawWidth = drawHeight * aspect
-            val logoTop = (y + 4f * scale).coerceAtMost(maxAllowedBottom - drawHeight)
+            val logoTop = (y + 6f * scale).coerceAtMost(maxAllowedBottom - drawHeight)
             val logoRect = RectF(
                 textLeft,
                 logoTop,

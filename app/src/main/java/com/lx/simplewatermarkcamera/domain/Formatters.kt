@@ -10,12 +10,24 @@ import kotlin.math.roundToInt
 object WatermarkFormatter {
     private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.CHINA)
     private val dateOfWeekFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd EEEE", Locale.CHINA)
+    private val bigTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.CHINA)
+    private val dayOfWeekFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE", Locale.CHINA)
+    private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.CHINA)
 
     fun formatTime(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
         timeFormatter.format(instant.atZone(zoneId))
 
     fun formatTimeWithDayOfWeek(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
         dateOfWeekFormatter.format(instant.atZone(zoneId))
+
+    fun formatBigTime(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
+        bigTimeFormatter.format(instant.atZone(zoneId))
+
+    fun formatDayOfWeek(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
+        dayOfWeekFormatter.format(instant.atZone(zoneId))
+
+    fun formatDate(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
+        dateFormatter.format(instant.atZone(zoneId))
 
     fun formatCoordinates(location: LocationSnapshot): String =
         "${formatLatitude(location.latitude)}, ${formatLongitude(location.longitude)}"
@@ -117,21 +129,24 @@ object WatermarkLayoutCalculator {
     ): RectSpec {
         val safeWidth = imageWidth.coerceAtLeast(1)
         val safeHeight = imageHeight.coerceAtLeast(1)
-        val padding = (safeWidth * 0.015f * fontScale).roundToInt().coerceAtLeast(10)
-        val titleHeight = (safeWidth * 0.024f * fontScale).roundToInt().coerceAtLeast(18)
-        val lineHeight = (safeWidth * 0.018f * fontScale).roundToInt().coerceAtLeast(14)
+        val baseScale = (safeWidth / 1080f) * fontScale
+
+        val padding = (18f * baseScale).roundToInt().coerceAtLeast(10)
+        val titleHeight = (40f * baseScale).roundToInt().coerceAtLeast(20)
+        val bigTimeHeight = (80f * baseScale).roundToInt().coerceAtLeast(36)
+        val lineHeight = (32f * baseScale).roundToInt().coerceAtLeast(16)
 
         val logoExtra = if (hasLogo) {
             when (logoPosition) {
-                LogoPosition.Above, LogoPosition.Below -> (safeWidth * 0.055f * fontScale).roundToInt()
-                LogoPosition.Left -> (safeWidth * 0.01f * fontScale).roundToInt()
+                LogoPosition.Above, LogoPosition.Below -> (130f * baseScale * 0.8f).roundToInt()
+                LogoPosition.Left -> (20f * baseScale).roundToInt()
             }
         } else 0
 
-        val desiredHeight = padding * 2 + titleHeight + lineHeight * lineCount.coerceAtLeast(1) + logoExtra
-        val maxHeight = (safeHeight * 0.45f).roundToInt().coerceAtLeast(1)
+        val desiredHeight = padding * 2 + titleHeight + bigTimeHeight + lineHeight * lineCount.coerceAtLeast(1) + logoExtra
+        val maxHeight = (safeHeight * 0.55f).roundToInt().coerceAtLeast(1)
         val height = desiredHeight.coerceAtMost(maxHeight).coerceAtLeast(1)
-        val margin = (safeWidth * 0.025f).roundToInt().coerceAtLeast(12)
+        val margin = (safeWidth * 0.03f).roundToInt().coerceAtLeast(12)
         val width = (safeWidth - margin * 2).coerceAtLeast(1)
         val top = (safeHeight - height - margin).coerceAtLeast(0)
         return RectSpec(margin, top, width, height)

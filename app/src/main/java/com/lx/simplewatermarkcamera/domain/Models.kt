@@ -27,9 +27,9 @@ enum class OpacityLevel(val alpha: Float, val label: String) {
 }
 
 enum class FontSizeLevel(val scale: Float, val label: String) {
-    Small(0.8f, "小"),
-    Medium(1.0f, "标准"),
-    Large(1.25f, "大")
+    Small(0.5f, "小 (0.5x)"),
+    Medium(1.0f, "标准 (1.0x)"),
+    Large(1.5f, "大 (1.5x)")
 }
 
 data class WatermarkConfig(

@@ -133,6 +133,7 @@ fun CameraScreen(
     val cameraController = remember {
         LifecycleCameraController(context).apply {
             setEnabledUseCases(CameraController.IMAGE_CAPTURE)
+            imageCaptureMode = ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY
             imageCaptureFlashMode = uiState.flashMode
         }
     }
