@@ -46,7 +46,7 @@ data class WatermarkConfig(
     val showCoordinates: Boolean = false,
     val showAltitude: Boolean = false,
     val showHeading: Boolean = true,
-    val saveOriginal: Boolean = false,
+    val saveOriginal: Boolean = true,
     val writeGpsExif: Boolean = false,
     val logoPath: String? = null,
 ) {

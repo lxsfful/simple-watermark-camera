@@ -53,7 +53,7 @@ fun PhotoPreviewScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("预览") },
+                title = { Text("预览（已自动保存至相册）") },
                 navigationIcon = {
                     IconButton(onClick = onRetake) {
                         Icon(Icons.Default.Close, contentDescription = "重拍")

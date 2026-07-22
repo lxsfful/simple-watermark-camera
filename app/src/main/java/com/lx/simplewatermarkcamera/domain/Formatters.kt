@@ -107,17 +107,31 @@ object PhotoFileNameGenerator {
 }
 
 object WatermarkLayoutCalculator {
-    fun bottomCard(imageWidth: Int, imageHeight: Int, lineCount: Int, hasLogo: Boolean, fontScale: Float = 1.0f): RectSpec {
+    fun bottomCard(
+        imageWidth: Int,
+        imageHeight: Int,
+        lineCount: Int,
+        hasLogo: Boolean,
+        fontScale: Float = 1.0f,
+        logoPosition: LogoPosition = LogoPosition.Above
+    ): RectSpec {
         val safeWidth = imageWidth.coerceAtLeast(1)
         val safeHeight = imageHeight.coerceAtLeast(1)
         val padding = (safeWidth * 0.015f * fontScale).roundToInt().coerceAtLeast(10)
         val titleHeight = (safeWidth * 0.024f * fontScale).roundToInt().coerceAtLeast(18)
         val lineHeight = (safeWidth * 0.018f * fontScale).roundToInt().coerceAtLeast(14)
-        val logoExtra = if (hasLogo) (safeWidth * 0.008f * fontScale).roundToInt() else 0
+
+        val logoExtra = if (hasLogo) {
+            when (logoPosition) {
+                LogoPosition.Above, LogoPosition.Below -> (safeWidth * 0.055f * fontScale).roundToInt()
+                LogoPosition.Left -> (safeWidth * 0.01f * fontScale).roundToInt()
+            }
+        } else 0
+
         val desiredHeight = padding * 2 + titleHeight + lineHeight * lineCount.coerceAtLeast(1) + logoExtra
-        val maxHeight = (safeHeight * 0.35f).roundToInt().coerceAtLeast(1)
+        val maxHeight = (safeHeight * 0.45f).roundToInt().coerceAtLeast(1)
         val height = desiredHeight.coerceAtMost(maxHeight).coerceAtLeast(1)
-        val margin = (safeWidth * 0.02f).roundToInt().coerceAtLeast(10)
+        val margin = (safeWidth * 0.025f).roundToInt().coerceAtLeast(12)
         val width = (safeWidth - margin * 2).coerceAtLeast(1)
         val top = (safeHeight - height - margin).coerceAtLeast(0)
         return RectSpec(margin, top, width, height)

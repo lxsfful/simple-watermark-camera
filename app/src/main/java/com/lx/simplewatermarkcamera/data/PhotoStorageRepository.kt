@@ -2,6 +2,7 @@ package com.lx.simplewatermarkcamera.data
 
 import android.content.ContentValues
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -64,6 +65,9 @@ class PhotoStorageRepository(private val context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
                 resolver.update(uri, done, null, null)
+            }
+            runCatching {
+                MediaScannerConnection.scanFile(context, arrayOf(uri.path), arrayOf("image/jpeg"), null)
             }
             return uri
         } catch (error: Throwable) {
