@@ -103,8 +103,8 @@ core/              ← 通用工具（OperationResult 等）
 
 | 项 | 风险 | 优先级 |
 |----|------|--------|
-| EXIF GPS 写入 key 存在但未实现 | 低（默认关闭，用户无感知） | P2 |
-| 天气无缓存，每次拍照都请求网络 | 中（频繁拍照时可能超时积压） | P2 |
+| EXIF GPS 写入 | 已基于 `ExifInterface` 完成 DMS 格式写入 | 已完成 |
+| 天气无缓存，每次拍照都请求网络 | 已实现 10 分钟 TTL 粗坐标缓存 | 已完成 |
 | `LocationRepository` API 29 以下降级为空 | 低（minSdk=29，永远不触发） | 已接受 |
-| `saveLogo` 传 Activity Context 给 ViewModel | 低（IO 操作短暂，不泄漏） | P3 |
+| `saveLogo` 传 Activity Context 给 ViewModel | 已修复为使用 Application Context | 已完成 |
 | ViewModel 依赖无法注入，单元测试需 Robolectric | 低（domain 层纯 JVM 已覆盖主要逻辑） | P3 |
